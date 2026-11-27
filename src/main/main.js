@@ -2,6 +2,9 @@ const { app, BrowserWindow, ipcMain, dialog, shell, clipboard, protocol, nativeT
 const path = require('path');
 const fs = require('fs');
 
+// โหมดพัฒนาใช้โฟลเดอร์ข้อมูลแยก: เปิดพร้อมกับตัวที่ติดตั้งได้ และไม่ไปแก้การตั้งค่า/ประวัติของตัวจริง
+if (!app.isPackaged) app.setPath('userData', app.getPath('userData') + ' (dev)');
+
 if (!app.requestSingleInstanceLock()) { app.quit(); return; }
 
 protocol.registerSchemesAsPrivileged([

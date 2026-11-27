@@ -35,6 +35,7 @@ const DEFAULTS = {
   numbering: false,
   numberStart: 1,
   numberPad: 2,
+  numberOrder: 'oldest',     // oldest = เก่า→ใหม่ (ตอน 1 = คลิปแรกสุด) / screen = ตามลำดับบนจอ
   theme: 'system',
   autoUpdateTools: true,
   tileSize: 200,

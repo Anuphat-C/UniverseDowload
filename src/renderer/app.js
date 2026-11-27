@@ -351,8 +351,50 @@ function updateChrome() {
   syncSelection(false);
 }
 
+// ----- ลำดับเลขตอน -----
+// แหล่งที่เป็นเพลย์ลิสต์ เรียงตอนจากบนลงล่างอยู่แล้ว (ตอน 1 อยู่บน)
+// ส่วนหน้าช่อง/บัญชี (TikTok, YouTube @ช่อง ฯลฯ) เรียงใหม่สุดไว้บน: ตอน 1 คือรายการล่างสุด
+const isAscendingSource = src => /[?&]list=|\/playlist|\/sets\/|\/album|\/series|\/season/i.test(src?.url || '');
+const itemByUid = uid => S.items.find(x => x.uid === uid);
+
+function orderedSelection() {
+  const list = [...els.keys()].filter(u => S.selected.has(u)).map(itemByUid);
+  for (const u of S.selected) if (!els.has(u)) { const it = itemByUid(u); if (it) list.push(it); }
+  if (S.settings.numberOrder === 'screen') return list;
+  // เก่า → ใหม่: ใช้วันที่ลงถ้ามี ไม่มีก็ใช้ลำดับในแหล่ง (หน้าช่อง: เลขลำดับมาก = เก่ากว่า)
+  return list
+    .map((it, pos) => ({ it, pos }))
+    .sort((a, b) => {
+      const x = a.it, y = b.it;
+      if (x.date && y.date && x.date !== y.date) return x.date < y.date ? -1 : 1;
+      if (x.src === y.src) return isAscendingSource(x.src) ? x.index - y.index : y.index - x.index;
+      return a.pos - b.pos;
+    })
+    .map(o => o.it);
+}
+
+function applyEpisodeTags() {
+  const on = S.settings.numbering && S.selected.size > 0;
+  const nums = new Map();
+  if (on) {
+    const start = Number(S.settings.numberStart) || 0;
+    const pad = Number(S.settings.numberPad) || 2;
+    orderedSelection().forEach((it, i) => nums.set(it.uid, String(start + i).padStart(pad, '0')));
+  }
+  for (const [uid, el] of els) {
+    const thumb = el.querySelector('.thumb');
+    let tag = thumb.querySelector('.tag.ep');
+    const n = nums.get(uid);
+    if (!n) { tag?.remove(); continue; }
+    if (!tag) { tag = document.createElement('span'); tag.className = 'tag ep'; thumb.appendChild(tag); }
+    tag.textContent = 'ตอน ' + n;
+  }
+}
+
 function syncSelection(updateCards = true) {
   if (updateCards) for (const [uid, el] of els) el.classList.toggle('sel', S.selected.has(uid));
+  applyEpisodeTags();
+  $('#numOrder').classList.toggle('hidden', !S.settings.numbering);
   const n = S.selected.size;
   $('#selCount').textContent = n;
   $('#actionBar').classList.toggle('show', n > 0);
@@ -432,8 +474,9 @@ function fillPresets(sel) {
 }
 fillPresets($('#presetSel'));
 $('#presetSel').onchange = e => setSetting({ preset: e.target.value });
-$('#chkNumber').onchange = e => setSetting({ numbering: e.target.checked });
-$('#numStart').onchange = e => setSetting({ numberStart: Math.max(0, +e.target.value || 0) });
+$('#chkNumber').onchange = async e => { await setSetting({ numbering: e.target.checked }); syncSelection(false); };
+$('#numStart').onchange = async e => { await setSetting({ numberStart: Math.max(0, +e.target.value || 0) }); syncSelection(false); };
+$('#numOrder').onchange = async e => { await setSetting({ numberOrder: e.target.value }); syncSelection(false); };
 $('#btnFolder').onclick = pickFolder;
 async function pickFolder() {
   const p = await ud.invoke('dialog:folder', S.settings.outDir);
@@ -446,9 +489,8 @@ function refreshFolderLabel() {
 }
 
 $('#btnDownload').onclick = async () => {
-  const items = [...els.keys()].filter(u => S.selected.has(u)).map(u => S.items.find(x => x.uid === u));
-  // รายการที่เลือกแต่ถูกซ่อนจากตัวกรอง ก็นับด้วย (ต่อท้าย)
-  for (const u of S.selected) if (!els.has(u)) { const it = S.items.find(x => x.uid === u); if (it) items.push(it); }
+  // ลำดับเดียวกับป้าย "ตอน xx" บนการ์ด (คิวจะเริ่มโหลดจากตอนแรกด้วย)
+  const items = orderedSelection();
   if (!items.length) return;
   const payload = items.map(({ url, title, thumb, kind, key, uploader, duration, size }) => ({ url, title, thumb, kind, key, uploader, duration, size, titleKnown: true }));
   await ud.invoke('queue:add', payload, {});
@@ -848,6 +890,7 @@ $('#onboardRetry').onclick = bootstrapTools;
   $('#presetSel').value = S.settings.preset;
   $('#chkNumber').checked = !!S.settings.numbering;
   $('#numStart').value = S.settings.numberStart ?? 1;
+  $('#numOrder').value = S.settings.numberOrder || 'oldest';
   $('#concVal').textContent = S.settings.concurrency;
   refreshFolderLabel();
   S.archive = new Set(await ud.invoke('archive:keys'));

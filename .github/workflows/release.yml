@@ -1,0 +1,37 @@
+# ออกเวอร์ชันใหม่: แก้ "version" ใน package.json → commit → สร้าง tag v<เวอร์ชัน> แล้ว push tag
+#   git tag v1.0.1 && git push origin v1.0.1
+# GitHub จะ build ตัวติดตั้งบน Windows แล้วอัปโหลดขึ้น Releases ให้อัตโนมัติ
+# โปรแกรมที่ติดตั้งอยู่ทุกเครื่องจะเห็นเวอร์ชันใหม่ และอัปเดตตัวเอง
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: ตรวจว่า tag ตรงกับ version ใน package.json
+        shell: pwsh
+        run: |
+          $v = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ("v$v" -ne "${{ github.ref_name }}") { throw "tag ${{ github.ref_name }} ไม่ตรงกับ package.json version $v" }
+
+      - run: npm ci
+
+      - name: Build + Publish
+        run: npx electron-builder --win --x64 --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

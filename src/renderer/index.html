@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' udthumb: data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>Universe Download</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="titlebar">
+    <div class="brand">
+      <img class="logo" src="logo.png" alt="">
+      <span>Universe Download</span>
+    </div>
+    <div id="updatePill" class="update-pill hidden"></div>
+  </header>
+
+  <div class="shell">
+    <nav class="side">
+      <button class="nav active" data-view="browse"><i data-icon="search"></i><span>ค้นหา</span></button>
+      <button class="nav" data-view="queue"><i data-icon="download"></i><span>คิว</span><b class="badge hidden" id="qBadge"></b></button>
+      <button class="nav" data-view="history"><i data-icon="clock"></i><span>ประวัติ</span></button>
+      <div class="grow"></div>
+      <button class="nav" data-view="settings"><i data-icon="settings"></i><span>ตั้งค่า</span></button>
+    </nav>
+
+    <main>
+      <!-- ================= ค้นหา / รายการ ================= -->
+      <section id="view-browse" class="view active">
+        <div class="omni">
+          <div class="omni-box" id="omniBox">
+            <i data-icon="link" class="omni-ico"></i>
+            <textarea id="urlInput" rows="1" spellcheck="false" placeholder="วางลิงก์คลิป เพลย์ลิสต์ หรือหน้าช่อง — YouTube, TikTok, Facebook, Instagram, X, ไฟล์ตรง ฯลฯ (ได้หลายลิงก์)"></textarea>
+            <button id="btnPaste" class="ghost" title="วางจากคลิปบอร์ด (Ctrl+V)"><i data-icon="clipboard"></i>วาง</button>
+            <button id="btnQuick" class="secondary" title="ส่งเข้าคิวโหลดทันที โดยไม่ต้องดึงรายการมาเลือก"><i data-icon="zap"></i>โหลดเลย</button>
+            <button id="btnFetch" class="primary"><i data-icon="list"></i>ดึงรายการ</button>
+          </div>
+          <div id="clipHint" class="clip-hint hidden"></div>
+          <div id="sources" class="sources"></div>
+        </div>
+
+        <div class="toolbar hidden" id="toolbar">
+          <label class="check"><input type="checkbox" id="chkAll"><span class="box"></span>เลือกทั้งหมด</label>
+          <span id="countLabel" class="muted"></span>
+          <div class="grow"></div>
+          <div class="search"><i data-icon="search"></i><input id="filterInput" placeholder="ค้นหาในรายการ" spellcheck="false"></div>
+          <button id="btnHideDone" class="chip-toggle" title="ซ่อนรายการที่เคยโหลดแล้ว"><i data-icon="eye-off"></i>ซ่อนที่โหลดแล้ว</button>
+          <button id="btnReverse" class="icon-btn" title="กลับลำดับ ใหม่→เก่า / เก่า→ใหม่"><i data-icon="sort"></i></button>
+          <div class="size-ctl" title="ขนาดรูปปก"><i data-icon="image"></i><input type="range" id="sizeRange" min="130" max="340" step="10"></div>
+          <div class="seg" id="viewSeg">
+            <button data-mode="grid" title="มุมมองรูปปก"><i data-icon="grid"></i></button>
+            <button data-mode="list" title="มุมมองรายการ"><i data-icon="rows"></i></button>
+          </div>
+          <button id="btnClear" class="icon-btn" title="ล้างรายการทั้งหมด"><i data-icon="trash"></i></button>
+        </div>
+
+        <div id="gridWrap" class="grid-wrap">
+          <div id="grid" class="grid"></div>
+          <div id="loadMore" class="load-more hidden"></div>
+          <div id="empty" class="empty">
+            <div class="empty-art"><img src="logo.png" alt=""></div>
+            <h2>วางลิงก์อะไรก็ได้ เพื่อเริ่มดาวน์โหลด</h2>
+            <p class="muted">รองรับกว่า 1,800 เว็บไซต์ ทั้งคลิปเดียว เพลย์ลิสต์ และทั้งช่อง/บัญชี</p>
+            <div class="site-chips">
+              <span>YouTube</span><span>TikTok</span><span>Facebook</span><span>Instagram</span><span>X / Twitter</span>
+              <span>Bilibili</span><span>SoundCloud</span><span>Vimeo</span><span>Twitch</span><span>Reddit</span>
+              <span>Pinterest</span><span>ไฟล์ตรง .zip .pdf .mp4</span>
+            </div>
+            <div class="tips">
+              <div><kbd>Ctrl</kbd>+<kbd>V</kbd> ตรงไหนก็ได้ เพื่อวางลิงก์แล้วดึงรายการทันที</div>
+              <div>ลากลิงก์จากเบราว์เซอร์มาวางบนหน้าต่างนี้ได้</div>
+              <div><kbd>Shift</kbd>+คลิก เพื่อเลือกเป็นช่วง เช่น ตอนที่ 1–20</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="actionBar" class="action-bar">
+          <div class="sel-info"><b id="selCount">0</b><span>รายการที่เลือก</span><button id="btnSelNone" class="link">ยกเลิก</button></div>
+          <div class="grow"></div>
+          <label class="num-toggle" title="ใส่เลขลำดับหน้าชื่อไฟล์ตามลำดับที่แสดง (เหมาะกับซีรีส์/ตอน)">
+            <input type="checkbox" id="chkNumber"><span class="box"></span>ใส่เลขตอน เริ่มที่
+            <input type="number" id="numStart" min="0" value="1">
+          </label>
+          <select id="presetSel" title="รูปแบบ/ความละเอียด"></select>
+          <button id="btnFolder" class="folder-btn"><i data-icon="folder"></i><span id="folderName"></span></button>
+          <button id="btnDownload" class="primary big"><i data-icon="download"></i><span>ดาวน์โหลด</span></button>
+        </div>
+      </section>
+
+      <!-- ================= คิว ================= -->
+      <section id="view-queue" class="view">
+        <div class="page-head">
+          <div>
+            <h1>คิวดาวน์โหลด</h1>
+            <div id="qStats" class="muted">ยังไม่มีรายการ</div>
+          </div>
+          <div class="grow"></div>
+          <div class="stepper" title="จำนวนที่โหลดพร้อมกัน">
+            <span>พร้อมกัน</span><button id="concDec">−</button><b id="concVal">3</b><button id="concInc">+</button>
+          </div>
+          <button id="btnOpenFolder" class="ghost"><i data-icon="folder"></i>เปิดโฟลเดอร์</button>
+          <button id="btnClearDone" class="ghost"><i data-icon="check"></i>ล้างที่เสร็จแล้ว</button>
+          <button id="btnCancelAll" class="ghost danger"><i data-icon="x"></i>ยกเลิกทั้งหมด</button>
+        </div>
+        <div id="queueList" class="qlist"></div>
+        <div id="queueEmpty" class="empty small">
+          <h2>ยังไม่มีอะไรในคิว</h2>
+          <p class="muted">เลือกคลิปจากหน้า "ค้นหา" แล้วกดดาวน์โหลด หรือวางลิงก์แล้วกด "โหลดเลย"</p>
+        </div>
+      </section>
+
+      <!-- ================= ประวัติ ================= -->
+      <section id="view-history" class="view">
+        <div class="page-head">
+          <div><h1>ประวัติการดาวน์โหลด</h1><div id="hStats" class="muted"></div></div>
+          <div class="grow"></div>
+          <div class="search"><i data-icon="search"></i><input id="historyFilter" placeholder="ค้นหาในประวัติ" spellcheck="false"></div>
+          <button id="btnClearHistory" class="ghost danger"><i data-icon="trash"></i>ล้างประวัติ</button>
+        </div>
+        <div id="historyList" class="hlist"></div>
+        <div id="historyEmpty" class="empty small"><h2>ยังไม่มีประวัติ</h2><p class="muted">ไฟล์ที่โหลดเสร็จจะแสดงที่นี่</p></div>
+      </section>
+
+      <!-- ================= ตั้งค่า ================= -->
+      <section id="view-settings" class="view">
+        <div class="page-head"><div><h1>ตั้งค่า</h1><div class="muted">บันทึกอัตโนมัติทุกครั้งที่เปลี่ยน</div></div></div>
+        <div id="settingsBody" class="settings"></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="onboard" class="onboard hidden">
+    <div class="onboard-card">
+      <h2>กำลังเตรียมเครื่องมือ</h2>
+      <p class="muted">ครั้งแรกครั้งเดียว โปรแกรมจะโหลดตัวช่วยดาวน์โหลดเวอร์ชันล่าสุดให้อัตโนมัติ</p>
+      <div id="onboardRows"></div>
+      <div id="onboardErr" class="err hidden"></div>
+      <button id="onboardRetry" class="primary hidden">ลองใหม่</button>
+    </div>
+  </div>
+
+  <div id="dropZone" class="drop-zone hidden"><div>ปล่อยลิงก์ตรงนี้</div></div>
+  <div id="toasts" class="toasts"></div>
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head"><b id="modalTitle"></b><button id="modalClose" class="icon-btn"><i data-icon="x"></i></button></div>
+      <pre id="modalBody"></pre>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

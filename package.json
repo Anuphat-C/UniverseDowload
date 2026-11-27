@@ -1,0 +1,64 @@
+{
+  "name": "universe-download",
+  "productName": "Universe Download",
+  "version": "1.0.0",
+  "description": "ดาวน์โหลดวิดีโอ เสียง รูปภาพ และไฟล์จากเว็บไซต์กว่า 1,800 แห่ง",
+  "main": "src/main/main.js",
+  "author": "Anuphat-C",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Anuphat-C/UniverseDowload.git"
+  },
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64",
+    "release": "electron-builder --win --x64 --publish always"
+  },
+  "build": {
+    "appId": "com.universedownload.app",
+    "productName": "Universe Download",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "UniverseDownload-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false,
+      "shortcutName": "Universe Download"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Anuphat-C",
+        "repo": "UniverseDowload",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
+  },
+  "devDependencies": {
+    "electron": "^45.5.0",
+    "electron-builder": "^26.18.0"
+  }
+}

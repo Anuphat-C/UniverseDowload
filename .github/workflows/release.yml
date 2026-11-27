@@ -16,9 +16,9 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -31,7 +31,18 @@ jobs:
 
       - run: npm ci
 
-      - name: Build + Publish
-        run: npx electron-builder --win --x64 --publish always
+      - name: Build
+        run: npx electron-builder --win --x64 --publish never
+
+      # อัปโหลดเองด้วยคำสั่งเดียว: ถ้าให้ electron-builder publish เอง มันอัปโหลดหลายไฟล์พร้อมกัน
+      # แล้วต่างคนสร้าง release ของตัวเอง ทำให้ได้ release ซ้ำ 2 อันบน tag เดียว
+      - name: Publish release
+        shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $v = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          gh release create "${{ github.ref_name }}" --title "$v" --generate-notes `
+            "dist/UniverseDownload-Setup-$v.exe" `
+            "dist/UniverseDownload-Setup-$v.exe.blockmap" `
+            "dist/latest.yml"

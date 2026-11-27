@@ -15,7 +15,10 @@ const { DownloadQueue } = require('./queue');
 const thumbs = require('./thumbs');
 const updater = require('./updater');
 
-app.setAppUserModelId('com.universedownload.app');
+// ต้องตรงกับ build.appId เพื่อให้ taskbar ใช้ไอคอนจาก shortcut ของตัวติดตั้ง
+// โหมดพัฒนาใช้รหัสแยก: ไม่งั้น Electron จะสร้าง Electron.lnk (ไอคอน Electron) ด้วยรหัสเดียวกัน
+// ตอนแสดงการแจ้งเตือน แล้ว taskbar ของตัวที่ติดตั้งจริงจะไปใช้ไอคอนผิด
+app.setAppUserModelId(app.isPackaged ? 'com.universedownload.app' : 'com.universedownload.app.dev');
 
 let win = null;
 const queue = new DownloadQueue();

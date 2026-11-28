@@ -137,9 +137,9 @@ class DownloadQueue extends EventEmitter {
       await fsp.mkdir(job.opts.outDir, { recursive: true });
       const kind = job.item.kind;
       if (kind === 'file') await this.runDirect(job);
-      else if (kind === 'gallery') await this.runGallery(job);
+      else if (kind === 'gallery') await this.cookieSafe(job, () => this.runGallery(job));
       else {
-        try { await this.runYtdlp(job); }
+        try { await this.cookieSafe(job, () => this.runYtdlp(job)); }
         catch (e) {
           if (!job.canceled && /Unsupported URL|No video formats|There'?s no video|no video in this|No media found/i.test(e.raw || e.message)) {
             const d = await probeDirect(job.item.url);
@@ -168,6 +168,22 @@ class DownloadQueue extends EventEmitter {
     this.running.delete(job.id);
     this.emitUpdate(job, true);
     this.pump();
+  }
+
+  // อ่านคุกกี้จากเบราว์เซอร์ไม่ได้ → โหลดใหม่แบบไม่ใช้คุกกี้ แล้วแจ้งเตือน (ไม่ให้คิวพังทั้งหมดเพราะคุกกี้)
+  async cookieSafe(job, fn) {
+    try { return await fn(); }
+    catch (e) {
+      const browser = job.opts.cookiesBrowser;
+      if (job.canceled || !browser || !tools.isCookieError(e.raw || e.message)) throw e;
+      const warn = tools.cookieWarning(browser);
+      this.pushLog(job, `[UD] ${warn}`);
+      this.emit('cookieWarn', warn);
+      job.opts.cookiesBrowser = '';
+      Object.assign(job, { part: 0, pct: 0, files: 0, phase: 'กำลังเริ่ม (ไม่ใช้คุกกี้)' });
+      this.emitUpdate(job, true);
+      return fn();
+    }
   }
 
   pushLog(job, line) {

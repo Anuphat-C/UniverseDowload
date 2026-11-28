@@ -243,11 +243,22 @@ function ytdlpCommonArgs(opts = {}) {
   a.push('--js-runtimes', `node:${process.execPath}`);
   return a;
 }
+// อ่านคุกกี้จากเบราว์เซอร์ไม่ได้ (เบราว์เซอร์เปิดอยู่จนไฟล์ถูกล็อก / Chrome-Edge รุ่นใหม่เข้ารหัสแบบ app-bound ฯลฯ)
+const COOKIE_ERR_RE = /cookie database|cookies? database|Failed to decrypt|DPAPI|app.?bound|could not find \w+ cookies|failed to load cookies|cookies?-from-browser|extract cookies/i;
+const isCookieError = msg => COOKIE_ERR_RE.test(String(msg || ''));
+const BROWSER_NAMES = { chrome: 'Chrome', edge: 'Edge', brave: 'Brave', opera: 'Opera', vivaldi: 'Vivaldi', firefox: 'Firefox', chromium: 'Chromium' };
+function cookieWarning(browser) {
+  const b = BROWSER_NAMES[browser] || browser;
+  return /firefox/i.test(browser)
+    ? `อ่านคุกกี้จาก ${b} ไม่ได้ (ล็อกอินใน ${b} ไว้หรือยัง?) — โหลดแบบไม่ใช้คุกกี้แทน`
+    : `อ่านคุกกี้จาก ${b} ไม่ได้ (${b} รุ่นใหม่ล็อกไฟล์คุกกี้ไว้) — โหลดแบบไม่ใช้คุกกี้แทน · ถ้าต้องล็อกอิน เปลี่ยนเป็น Firefox ในหน้าตั้งค่า`;
+}
+
 function childEnv() {
   return { ...process.env, ELECTRON_RUN_AS_NODE: '1', PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' };
 }
 
 module.exports = {
   SPECS, status, install, hasUpdate, ytdlpPath, galleryDlPath, ffmpegDir,
-  detectSystemFfmpeg, cleanupUnused, ytdlpCommonArgs, childEnv, binDir
+  detectSystemFfmpeg, cleanupUnused, ytdlpCommonArgs, childEnv, binDir, isCookieError, cookieWarning
 };

@@ -112,7 +112,14 @@ function toast(text, kind = 'info', action) {
     el.appendChild(b);
   }
   $('#toasts').appendChild(el);
-  setTimeout(() => { el.style.transition = 'opacity .3s'; el.style.opacity = 0; setTimeout(() => el.remove(), 300); }, kind === 'err' ? 7000 : 4000);
+  setTimeout(() => { el.style.transition = 'opacity .3s'; el.style.opacity = 0; setTimeout(() => el.remove(), 300); }, kind === 'err' || action ? 8000 : 4000);
+}
+// เตือนเรื่องคุกกี้ครั้งเดียวต่อนาที (ดึงหลายลิงก์/โหลดหลายคลิปพร้อมกันจะไม่เด้งซ้ำ)
+let lastCookieWarn = 0;
+function warnCookieOnce(text) {
+  if (Date.now() - lastCookieWarn < 60000) return;
+  lastCookieWarn = Date.now();
+  toast(text, 'warn', { label: 'เปิดตั้งค่า', run: () => go('settings') });
 }
 function showModal(title, body) { $('#modalTitle').textContent = title; $('#modalBody').textContent = body; $('#modal').classList.remove('hidden'); }
 $('#modalClose').onclick = () => $('#modal').classList.add('hidden');
@@ -202,7 +209,8 @@ ud.on('fetch:items', ({ id, items }) => {
   appendCards(fresh);
   renderSources();
 });
-ud.on('fetch:done', ({ id, count, hasMore, error, note, warn, stopped }) => {
+ud.on('fetch:done', ({ id, count, hasMore, error, note, warn, stopped, cookieWarn }) => {
+  if (cookieWarn) warnCookieOnce(cookieWarn);
   const src = S.sources.get(id);
   if (!src) return;
   src.status = error ? 'error' : 'done';
@@ -717,7 +725,7 @@ const NAME_OPTS = [
   ['date_id', 'วันที่_รหัสคลิป'],
   ['id', 'รหัสคลิปอย่างเดียว']
 ];
-const COOKIE_OPTS = [['', 'ไม่ใช้'], ['firefox', 'Firefox (แนะนำ)'], ['chrome', 'Chrome'], ['edge', 'Edge'], ['brave', 'Brave'], ['opera', 'Opera'], ['vivaldi', 'Vivaldi']];
+const COOKIE_OPTS = [['', 'ไม่ใช้'], ['firefox', 'Firefox (แนะนำ)'], ['chrome', 'Chrome (ต้องปิด Chrome ก่อน)'], ['edge', 'Edge (ต้องปิด Edge ก่อน)'], ['brave', 'Brave (ต้องปิด Brave ก่อน)'], ['opera', 'Opera'], ['vivaldi', 'Vivaldi']];
 const LIMIT_OPTS = [[30, '30 รายการ'], [60, '60 รายการ'], [100, '100 รายการ'], [200, '200 รายการ'], [500, '500 รายการ'], [0, 'ทั้งหมดในครั้งเดียว']];
 const THEME_OPTS = [['system', 'ตามระบบ Windows'], ['dark', 'มืด'], ['light', 'สว่าง']];
 
@@ -842,6 +850,7 @@ ud.on('tools:progress', p => {
 });
 ud.on('tools:changed', st => { S.tools = st; if (S.view === 'settings') renderSettings(); });
 ud.on('toast', t => toast(t.text, t.kind));
+ud.on('cookie:warn', text => warnCookieOnce(text));
 
 // ----- app self-update -----
 ud.on('update:status', u => {

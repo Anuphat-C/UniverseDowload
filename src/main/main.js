@@ -143,6 +143,7 @@ queue.on('update', job => send('queue:update', job));
 queue.on('removed', ids => send('queue:removed', ids));
 queue.on('stats', s => send('queue:stats', s));
 queue.on('archived', key => send('archive:add', key));
+queue.on('cookieWarn', text => send('cookie:warn', text));
 let finishedBatch = 0, notifyTimer = null;
 queue.on('finished', () => {
   finishedBatch++;

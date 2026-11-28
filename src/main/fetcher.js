@@ -84,9 +84,29 @@ const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20
 
 /**
  * เริ่มดึงรายการ
- * cb.items(list) / cb.log(line) / cb.done({count, hasMore, error})
+ * cb.items(list) / cb.log(line) / cb.done({count, hasMore, error, cookieWarn})
+ * ถ้าอ่านคุกกี้จากเบราว์เซอร์ไม่ได้ → ลองใหม่แบบไม่ใช้คุกกี้ทันที แล้วแจ้งเตือน (ไม่ให้ทั้งโปรแกรมใช้ไม่ได้เพราะคุกกี้)
  */
-function startFetch({ url, start = 1, limit = 60, opts = {} }, cb) {
+function startFetch(params, cb) {
+  let cur = null, stopped = false;
+  const run = (opts, cookieWarn) => {
+    cur = startFetchOnce({ ...params, opts }, {
+      items: cb.items,
+      log: cb.log,
+      done: r => {
+        if (!stopped && r.cookieFailed) {
+          cb.log(`[UD] ${tools.cookieWarning(opts.cookiesBrowser)}`);
+          return run({ ...opts, cookiesBrowser: '' }, tools.cookieWarning(opts.cookiesBrowser));
+        }
+        cb.done(cookieWarn ? { ...r, cookieWarn } : r);
+      }
+    });
+  };
+  run(params.opts || {});
+  return { stop() { stopped = true; cur?.stop(); } };
+}
+
+function startFetchOnce({ url, start = 1, limit = 60, opts = {} }, cb) {
   const exe = tools.ytdlpPath();
   let proc = null, stopped = false, count = 0, errors = [], buf = [], flushTimer = null, genericHold = null;
   const flush = () => { flushTimer = null; if (buf.length) { cb.items(buf); buf = []; } };
@@ -108,6 +128,10 @@ function startFetch({ url, start = 1, limit = 60, opts = {} }, cb) {
       if (d && !isMedia) cb.items([directItem(d)]);
       else cb.items([genericHold]);
       return cb.done({ count: 1, hasMore: false });
+    }
+    if (count === 0 && opts.cookiesBrowser && tools.isCookieError(errors.join('\n'))) {
+      const err = errors.join('\n');
+      return cb.done({ count: 0, hasMore: false, error: humanError(err), cookieFailed: true });
     }
     if (count === 0) {
       // yt-dlp ไม่รู้จัก → ลองดูว่าเป็นไฟล์ตรงไหม → ถ้าไม่ใช่ ส่งต่อให้โหมดรูปภาพ/แกลเลอรี
@@ -190,6 +214,8 @@ function killTree(pid) {
 // แปลงข้อความ error ของ yt-dlp เป็นภาษาคน
 function humanError(msg = '') {
   const m = String(msg);
+  if (tools.isCookieError(m))
+    return 'อ่านคุกกี้จากเบราว์เซอร์ไม่ได้ — ปิดเบราว์เซอร์นั้นก่อน หรือเปลี่ยนเป็น Firefox / "ไม่ใช้" ในหน้าตั้งค่า';
   if (/Private video|private|login required|Sign in to confirm|requires? (authentication|login)|log ?in|cookies/i.test(m))
     return 'ต้องล็อกอินก่อนถึงจะดูได้ — เปิด "ใช้คุกกี้จากเบราว์เซอร์" ในหน้าตั้งค่า แล้วลองใหม่';
   if (/HTTP Error 429|Too Many Requests|rate.?limit/i.test(m))

@@ -157,7 +157,11 @@ function startFetchOnce({ url, start = 1, limit = 60, opts = {} }, cb) {
 
   const args = [
     url, '--flat-playlist', '--lazy-playlist', '--ignore-errors', '--no-colors', '--encoding', 'utf-8',
-    '--extractor-retries', '3', '-O', `%(.{${FIELDS}})j`, ...tools.ytdlpCommonArgs(opts)
+    '--extractor-retries', '3', '-O', `%(.{${FIELDS}})j`,
+    // ดึงรายการไม่ต้องใช้ ffmpeg: ชี้ไปโฟลเดอร์ว่าง กัน yt-dlp เรียก "ffmpeg -bsfs" กับลิงก์แบบ HLS (Dropbox, BiliBili ฯลฯ)
+    // ซึ่งบางเครื่องค้าง 15-90 วินาที (ffmpeg ตัวใหญ่ถูกสแกนไวรัสก่อนรัน)
+    '--ffmpeg-location', noFfmpegDir(),
+    ...tools.ytdlpCommonArgs(opts)
   ];
   if (limit > 0) args.push('--playlist-items', `${start}:${start + limit - 1}`);
   else if (start > 1) args.push('--playlist-items', `${start}:`);
@@ -190,6 +194,15 @@ function startFetchOnce({ url, start = 1, limit = 60, opts = {} }, cb) {
       killTree(proc.pid);
     }
   };
+}
+
+let noFf = null;
+function noFfmpegDir() {
+  if (!noFf) {
+    noFf = path.join(tools.binDir(), 'no-ffmpeg');
+    try { require('fs').mkdirSync(noFf, { recursive: true }); } catch {}
+  }
+  return noFf;
 }
 
 function hostOf(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } }

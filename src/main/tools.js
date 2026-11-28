@@ -192,6 +192,7 @@ function install(name, onProgress = () => {}) {
 // ลบโฟลเดอร์เวอร์ชันเก่าที่ไม่ได้ใช้แล้ว (ถ้ายังถูกใช้อยู่จะข้ามไป แล้วลบรอบหน้า)
 function cleanupUnused() {
   const keep = new Set(Object.values(getManifest()).map(v => v?.exe && path.relative(binDir(), v.exe).split(path.sep)[0]));
+  keep.add('no-ffmpeg'); // โฟลเดอร์ว่างที่ fetcher ใช้ปิด ffmpeg ตอนดึงรายการ
   let entries = [];
   try { entries = fs.readdirSync(binDir(), { withFileTypes: true }); } catch { return; }
   for (const e of entries) {

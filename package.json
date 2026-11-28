@@ -1,7 +1,7 @@
 {
   "name": "universe-download",
   "productName": "Universe Download",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "ดาวน์โหลดวิดีโอ เสียง รูปภาพ และไฟล์จากเว็บไซต์กว่า 1,800 แห่ง",
   "main": "src/main/main.js",
   "author": "Anuphat-C",
